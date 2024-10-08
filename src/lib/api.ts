@@ -147,7 +147,7 @@ async function getPlaceDetails(placeName: string, location: string): Promise<Pla
 
     return {
       name: place.name,
-      photos: place.photos ? place.photos.map((photo: string) => 
+      photos: place.photos ? place.photos.map((photo: { photo_reference: string }) => 
         `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${apiKey}`
       ) : [],
       hours: place.opening_hours ? place.opening_hours.weekday_text : [],
