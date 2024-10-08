@@ -1,4 +1,4 @@
-import { exportRecommendationsToCSV } from '@/lib/api'
+import { CategoryRecommendations, exportRecommendationsToCSV } from '@/lib/api'
 import { create } from 'zustand'
 
 interface AppState {
@@ -10,13 +10,13 @@ interface AppState {
   numberOfLocations: number
   search: () => void
   resetSearch: () => void
-  exportResults: (data: any[]) => void
+  exportResults: (data: CategoryRecommendations[]) => void
   updateLocation: (location: string) => void
   updateCategories: (categories: string[]) => void
   updateNumberOfLocations: (numberOfLocations: number) => void
 }
 
-const useAppStore = create<AppState>()((set, get) => ({
+const useAppStore = create<AppState>()((set) => ({
   thinking: false,
   showResults: false,
   location: '',
@@ -32,7 +32,7 @@ const useAppStore = create<AppState>()((set, get) => ({
   resetSearch: () => {
     set({ thinking: false, location: '', numberOfLocations: 0, categories: [], showResults: false, results: [] })
   },
-  exportResults: async (data: any[]) => {
+  exportResults: async (data: CategoryRecommendations[]) => {
     set({ thinking: true })
     exportRecommendationsToCSV(data)
     set({ thinking: false })

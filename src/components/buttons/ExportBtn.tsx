@@ -3,8 +3,9 @@
 import React from 'react'
 import { Button } from '../ui/button';
 import useAppStore from '@/store/app';
+import { CategoryRecommendations } from '@/lib/api';
 
-export default function ExportBtn({ data=[] }: Readonly<{ data: {[k: string]: any}[] }>) {
+export default function ExportBtn({ data=[] }: Readonly<{ data: CategoryRecommendations[] }>) {
   const { exportResults } = useAppStore();
   return (
     <Button
