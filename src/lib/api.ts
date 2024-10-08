@@ -9,15 +9,19 @@ export async function askAIForLocations({ categories, location, numberOfLocation
   location: string, 
   numberOfLocations: number 
 }) {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
+    systemInstruction: "You are local travel agent. You list specific locations. Do not include location in list of locations. Do not include locations that do not have addresses or hours of operations listed"
+  });
   const questions: string[] = [];
   
   const categoryQuestions: { [key: string]: string } = {
-    do: `What are the top ${numberOfLocations} places to do things in ${location}?`,
-    eat: `What are the top ${numberOfLocations} places to eat in ${location}?`,
-    stay: `What are the top ${numberOfLocations} places to stay in ${location}?`,
-    shop: `What are the top ${numberOfLocations} places to shop in ${location}?`
+    do: `Where are ${numberOfLocations} places to do activities near ${location}?`,
+    eat: `Where are ${numberOfLocations} places to eat near ${location}?`,
+    stay: `Where are ${numberOfLocations} places to stay near ${location}?`,
+    shop: `Where are ${numberOfLocations} places to shop near ${location}?`
   };
+  console.log('categoryQuestions:', categoryQuestions);
 
   categories.forEach(category => {
     const lowerCategory = category.toLowerCase();
@@ -28,6 +32,7 @@ export async function askAIForLocations({ categories, location, numberOfLocation
 
   const result = await model.generateContent(questions);
   const responseText = result.response.text();
+  console.log('responseText:', responseText);
   const parsedRecommendations = await parseRecommendations(responseText, location);
 
   return parsedRecommendations;
@@ -52,27 +57,36 @@ export interface CategoryRecommendations {
 }
 
 async function parseRecommendations(response: string, location: string): Promise<CategoryRecommendations[]> {
-  const categories = response.split('##').filter(Boolean);
-  
+  // Split the content into categories
+  const categories = response.split(/^##\s+/m)
+    .map(category => category.trim())
+    .filter(Boolean);
+
   const parsedCategories = await Promise.all(categories.map(async category => {
-    const [categoryTitle, ...items] = category.trim().split('\n').filter(Boolean);
+    const [categoryTitle, ...items] = category.split('\n').filter(Boolean);
+    
+    // Remove any remaining special characters from the category title
+    const cleanCategoryTitle = categoryTitle.replace(/[*#]/g, '').trim();
     
     let simplifiedCategory: 'do' | 'eat' | 'stay' | 'shop';
-    if (categoryTitle.toLowerCase().includes('places to do')) {
+    if (cleanCategoryTitle.toLowerCase().includes('activities') || cleanCategoryTitle.toLowerCase().includes('do')) {
       simplifiedCategory = 'do';
-    } else if (categoryTitle.toLowerCase().includes('places to eat')) {
+    } else if (cleanCategoryTitle.toLowerCase().includes('eat') || cleanCategoryTitle.toLowerCase().includes('food') || cleanCategoryTitle.toLowerCase().includes('eating')) {
       simplifiedCategory = 'eat';
-    } else if (categoryTitle.toLowerCase().includes('places to stay')) {
+    } else if (cleanCategoryTitle.toLowerCase().includes('stay') || cleanCategoryTitle.toLowerCase().includes('staying')) {
       simplifiedCategory = 'stay';
-    } else if (categoryTitle.toLowerCase().includes('places to shop')) {
+    } else if (cleanCategoryTitle.toLowerCase().includes('shopping') || cleanCategoryTitle.toLowerCase().includes('shop')) {
       simplifiedCategory = 'shop';
     } else {
-      throw new Error(`Unknown category: ${categoryTitle}`);
+      return null; // Skip categories that don't match our expected types
     }
 
     const recommendations = await Promise.all(items.map(async item => {
-      const [name, description] = item.split(':');
-      const cleanName = name.replace(/^\d+\.\s*\*\*/, '').replace(/\*\*$/, '').trim();
+      const match = item.match(/^\d+\.\s*\*\*(.*?):\*\*\s*(.*)/);
+      if (!match) return null;
+
+      const [, name, description] = match;
+      const cleanName = name.trim();
       
       const placeDetails = await getPlaceDetails(cleanName, location);
 
@@ -92,11 +106,11 @@ async function parseRecommendations(response: string, location: string): Promise
 
     return {
       category: simplifiedCategory,
-      recommendations
+      recommendations: recommendations.filter((rec): rec is Recommendation => rec !== null)
     };
   }));
 
-  return parsedCategories;
+  return parsedCategories.filter((cat): cat is CategoryRecommendations => cat !== null);
 }
 
 export interface PlaceDetails {
