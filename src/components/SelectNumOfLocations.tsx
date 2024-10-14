@@ -15,7 +15,7 @@ export default function SelectNumOfLocations() {
   const ButtonOption = ({ num, placeholder }: { num: number; placeholder?: string }) => (
     <button
       onClick={() => selectLocation(num)}
-      className={`flex px-[24px] py-[16px] bg-[${numberOfLocations === num ? '#7f7f7' : '#f7f7f7'}] w-full border-b-[1px] border-gray`}
+      className={`flex px-[24px] py-[16px] ${numberOfLocations === num ? 'bg-[#7f7f7f]' : 'bg-[#f7f7f7]'}`}
     >
       <span>{placeholder ?? `${num} locations`}</span>
     </button>

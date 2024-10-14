@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { mkConfig, generateCsv, download } from "export-to-csv";
 
-const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY as string;
 const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY as string);
 
 export async function askAIForLocations({ categories, location, numberOfLocations }: { 
@@ -9,33 +9,35 @@ export async function askAIForLocations({ categories, location, numberOfLocation
   location: string, 
   numberOfLocations: number 
 }) {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
-    systemInstruction: "You are local travel agent. You list specific locations. Do not include location in list of locations. Do not include locations that do not have addresses or hours of operations listed"
-  });
-  const questions: string[] = [];
-  
-  const categoryQuestions: { [key: string]: string } = {
-    do: `Where are ${numberOfLocations} places to do activities near ${location}?`,
-    eat: `Where are ${numberOfLocations} places to eat near ${location}?`,
-    stay: `Where are ${numberOfLocations} places to stay near ${location}?`,
-    shop: `Where are ${numberOfLocations} places to shop near ${location}?`
-  };
-  console.log('categoryQuestions:', categoryQuestions);
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      systemInstruction: "You are a local travel agent. You list specific locations. Do not include location in the list of locations. Do not include locations that do not have addresses or hours of operations listed"
+    });
+    
+    const categoryQuestions: { [key: string]: string } = {
+      do: `Where are ${numberOfLocations} places to do activities near ${location}?`,
+      eat: `Where are ${numberOfLocations} places to eat near ${location}?`,
+      stay: `Where are ${numberOfLocations} places to stay near ${location}?`,
+      shop: `Where are ${numberOfLocations} places to shop near ${location}?`
+    };
+    console.log('categoryQuestions:', categoryQuestions);
 
-  categories.forEach(category => {
-    const lowerCategory = category.toLowerCase();
-    if (lowerCategory in categoryQuestions) {
-      questions.push(categoryQuestions[lowerCategory]);
-    }
-  });
+    const questions = categories
+      .map(category => category.toLowerCase())
+      .filter(category => category in categoryQuestions)
+      .map(category => categoryQuestions[category]);
 
-  const result = await model.generateContent(questions);
-  const responseText = result.response.text();
-  console.log('responseText:', responseText);
-  const parsedRecommendations = await parseRecommendations(responseText, location);
-
-  return parsedRecommendations;
+    const result = await model.generateContent(questions);
+    const responseText = result.response.text();
+    console.log('responseText:', responseText);
+    
+    const parsedRecommendations = await parseRecommendations(responseText, location);
+    return parsedRecommendations;
+  } catch (error) {
+    console.error('Error in askAIForLocations:', error);
+    throw error; // Re-throw the error after logging
+  }
 }
 
 export interface Recommendation {

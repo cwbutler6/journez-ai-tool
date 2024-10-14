@@ -1,13 +1,20 @@
 "use client";
 
+import React from "react";
 import Image from "next/image";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
-import { useState } from "react";
+import { FC, memo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Recommendation } from "@/lib/api";
 import Link from "next/link";
+import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "./ui/carousel";
 
-export default function CategoryList({ label, places=[] }: { label: string, places?: Recommendation[] }) {
+interface CategoryListProps {
+  label: string;
+  places?: Recommendation[];
+}
+
+const CategoryList: FC<CategoryListProps> = memo(function CategoryListComponent({ label, places=[] }: CategoryListProps) {
   const [open, setOpen] = useState(false);
   return (
     <Collapsible className='rounded-[20px] border-[2px] border-[#F6F6F6]' onOpenChange={setOpen}>
@@ -18,10 +25,20 @@ export default function CategoryList({ label, places=[] }: { label: string, plac
 
       <CollapsibleContent>
         <div className='flex flex-row gap-[24px] px-[24px] flex-wrap'>
-          {places.map((place, index) => (
-            <div key={index} className='flex flex-col p-[20px] pb-[20px] rounded-[24px] bg-[#F6F6F6] w-[335px] min-h-3 gap-y-[12px]'>
+          {places.map((place) => (
+            <div key={place.name} className='flex flex-col p-[20px] pb-[20px] rounded-[24px] bg-[#F6F6F6] w-[335px] min-h-3 gap-y-[12px]'>
               <div className="w-full h-[150px] rounded-[12px] flex items-center justify-cente relative">
-                {place.photos.length > 0 && <Image src={place.photos[0]} alt={place.name} className="rounded-md" fill objectFit="cover" />}
+                <Carousel className="w-full">
+                  <CarouselContent>
+                    {place.photos.map((photo) => (
+                      <CarouselItem key={photo} className="h-[150px] relative">
+                        <Image src={photo} alt={place.name} className="rounded-md" fill objectFit="cover" />
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious className="absolute top-[50%] left-[8px]" />
+                  <CarouselNext className="absolute top-[50%] right-[8px]" />
+                </Carousel>
               </div>
 
               <div className="px-[8px] py-[4px] bg-[#DBDBDB] rounded-[4px]">
@@ -66,4 +83,6 @@ export default function CategoryList({ label, places=[] }: { label: string, plac
       </CollapsibleContent>
     </Collapsible>
   )
-}
+})
+
+export default CategoryList;

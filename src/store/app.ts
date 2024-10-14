@@ -5,10 +5,9 @@ interface AppState {
   thinking: boolean
   showResults: boolean
   location: string
-  results: unknown[]
+  results: CategoryRecommendations[]
   categories: string[]
   numberOfLocations: number
-  search: () => void
   resetSearch: () => void
   exportResults: (data: CategoryRecommendations[]) => void
   updateLocation: (location: string) => void
@@ -23,19 +22,18 @@ const useAppStore = create<AppState>()((set) => ({
   results: [],
   categories: [],
   numberOfLocations: 0,
-  search: () => {
-    set({ thinking: true })
-    setTimeout(() => {
-      set({ thinking: false, showResults: true, results: [] })
-    }, 3000);
-  },
   resetSearch: () => {
     set({ thinking: false, location: '', numberOfLocations: 0, categories: [], showResults: false, results: [] })
   },
   exportResults: async (data: CategoryRecommendations[]) => {
     set({ thinking: true })
-    exportRecommendationsToCSV(data)
-    set({ thinking: false })
+    try {
+      exportRecommendationsToCSV(data)
+    } catch (error) {
+      console.error('Error exporting results:', error)
+    } finally {
+      set({ thinking: false })
+    }
   },
   updateLocation: (location: string) => {
     set({ location })
