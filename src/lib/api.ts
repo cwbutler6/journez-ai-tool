@@ -12,14 +12,14 @@ export async function askAIForLocations({ categories, location, numberOfLocation
   try {
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
-      systemInstruction: "You are a local travel agent. You list specific locations. Do not include location in the list of locations. Do not include locations that do not have addresses or hours of operations listed"
+      systemInstruction: "You are a local travel agent. You list specific locations. Do not include general areas or the location itselfin the list of locations. Do not include locations that do not have physical addresses, websites, or hours of operations listed"
     });
     
     const categoryQuestions: { [key: string]: string } = {
-      do: `Where are ${numberOfLocations} places to do activities near ${location}?`,
-      eat: `Where are ${numberOfLocations} places to eat near ${location}?`,
-      stay: `Where are ${numberOfLocations} places to stay near ${location}?`,
-      shop: `Where are ${numberOfLocations} places to shop near ${location}?`
+      do: `Where are ${numberOfLocations} places to do activities in ${location}?`,
+      eat: `Where are ${numberOfLocations} places to eat in ${location}?`,
+      stay: `Where are ${numberOfLocations} places to stay in ${location}?`,
+      shop: `Where are ${numberOfLocations} places to shop in ${location}?`
     };
     console.log('categoryQuestions:', categoryQuestions);
 
@@ -33,6 +33,7 @@ export async function askAIForLocations({ categories, location, numberOfLocation
     console.log('responseText:', responseText);
     
     const parsedRecommendations = await parseRecommendations(responseText, location);
+    console.log('parsedRecommendations:', parsedRecommendations);
     return parsedRecommendations;
   } catch (error) {
     console.error('Error in askAIForLocations:', error);
