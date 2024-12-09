@@ -98,7 +98,8 @@ async function parseRecommendations(response: string, location: string): Promise
       const items = trimmedSection.split(/\n(?=\d+\.\s+)/).filter(Boolean);
       
       for (const item of items) {
-        const match = item.match(/^\d+\.\s+\*\*(.*?):\*\*\s*(.*)/s);
+        // Match the name between ** ** and capture everything after the colon
+        const match = item.match(/^\d+\.\s+\*\*(.*?):\*\*\s*([^]*)/);
         if (match) {
           const [, name, description] = match;
           const cleanName = name.trim();
