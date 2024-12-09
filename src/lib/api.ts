@@ -9,6 +9,7 @@ export async function askAIForLocations({ categories, location, numberOfLocation
   location: string, 
   numberOfLocations: number 
 }) {
+  console.log('askAIForLocations:', categories, location, numberOfLocations);
   try {
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
@@ -21,7 +22,6 @@ export async function askAIForLocations({ categories, location, numberOfLocation
       stay: `Where are ${numberOfLocations} places to stay in ${location}?`,
       shop: `Where are ${numberOfLocations} places to shop in ${location}?`
     };
-    console.log('categoryQuestions:', categoryQuestions);
 
     const questions = categories
       .map(category => category.toLowerCase())
@@ -60,60 +60,77 @@ export interface CategoryRecommendations {
 }
 
 async function parseRecommendations(response: string, location: string): Promise<CategoryRecommendations[]> {
-  // Split the content into categories
-  const categories = response.split(/^##\s+/m)
-    .map(category => category.trim())
-    .filter(Boolean);
+  // Split into sections based on double newlines
+  const sections = response.split('\n\n').filter(Boolean);
+  const result: CategoryRecommendations[] = [];
 
-  const parsedCategories = await Promise.all(categories.map(async category => {
-    const [categoryTitle, ...items] = category.split('\n').filter(Boolean);
+  let currentCategory: 'do' | 'eat' | 'stay' | 'shop' | null = null;
+  let currentRecommendations: Promise<Recommendation | null>[] = [];
+
+  for (const section of sections) {
+    const trimmedSection = section.trim();
     
-    // Remove any remaining special characters from the category title
-    const cleanCategoryTitle = categoryTitle.replace(/[*#]/g, '').trim();
-    
-    let simplifiedCategory: 'do' | 'eat' | 'stay' | 'shop';
-    if (cleanCategoryTitle.toLowerCase().includes('activities') || cleanCategoryTitle.toLowerCase().includes('do')) {
-      simplifiedCategory = 'do';
-    } else if (cleanCategoryTitle.toLowerCase().includes('eat') || cleanCategoryTitle.toLowerCase().includes('food') || cleanCategoryTitle.toLowerCase().includes('eating')) {
-      simplifiedCategory = 'eat';
-    } else if (cleanCategoryTitle.toLowerCase().includes('stay') || cleanCategoryTitle.toLowerCase().includes('staying')) {
-      simplifiedCategory = 'stay';
-    } else if (cleanCategoryTitle.toLowerCase().includes('shopping') || cleanCategoryTitle.toLowerCase().includes('shop')) {
-      simplifiedCategory = 'shop';
-    } else {
-      return null; // Skip categories that don't match our expected types
-    }
+    // Check if this is a category header
+    if (trimmedSection.startsWith('**')) {
+      // If we have a previous category, save it
+      if (currentCategory && currentRecommendations.length > 0) {
+        const recommendations = (await Promise.all(currentRecommendations)).filter((r): r is Recommendation => r !== null);
+        result.push({ category: currentCategory, recommendations });
+      }
 
-    const recommendations = await Promise.all(items.map(async item => {
-      const match = item.match(/^\d+\.\s*\*\*(.*?):\*\*\s*(.*)/);
-      if (!match) return null;
-
-      const [, name, description] = match;
-      const cleanName = name.trim();
+      // Determine new category
+      const sectionLower = trimmedSection.toLowerCase();
+      if (sectionLower.includes('activities')) {
+        currentCategory = 'do';
+      } else if (sectionLower.includes('places to eat')) {
+        currentCategory = 'eat';
+      } else if (sectionLower.includes('places to shop')) {
+        currentCategory = 'shop';
+      } else if (sectionLower.includes('places to stay')) {
+        currentCategory = 'stay';
+      } else {
+        currentCategory = null;
+      }
+      currentRecommendations = [];
+    } 
+    // If we have a current category and this section contains numbered items
+    else if (currentCategory && /^\d+\.\s+/.test(trimmedSection)) {
+      const items = trimmedSection.split(/\n(?=\d+\.\s+)/).filter(Boolean);
       
-      const placeDetails = await getPlaceDetails(cleanName, location);
+      for (const item of items) {
+        const match = item.match(/^\d+\.\s+\*\*(.*?):\*\*\s*(.*)/s);
+        if (match) {
+          const [, name, description] = match;
+          const cleanName = name.trim();
+          
+          currentRecommendations.push((async () => {
+            const placeDetails = await getPlaceDetails(cleanName, location);
+            
+            return {
+              name: placeDetails ? placeDetails.name : cleanName,
+              description: description ? description.trim() : '',
+              photos: placeDetails ? placeDetails.photos : [],
+              hours: placeDetails ? placeDetails.hours : [],
+              googleDescription: placeDetails ? placeDetails.description : '',
+              latitude: placeDetails ? placeDetails.latitude : null,
+              longitude: placeDetails ? placeDetails.longitude : null,
+              address: placeDetails ? placeDetails.address : null,
+              phone: placeDetails ? placeDetails.phone : null,
+              website: placeDetails ? placeDetails.website : null
+            };
+          })());
+        }
+      }
+    }
+  }
 
-      return {
-        name: placeDetails ? placeDetails.name : cleanName,
-        description: description ? description.trim() : '',
-        photos: placeDetails ? placeDetails.photos : [],
-        hours: placeDetails ? placeDetails.hours : [],
-        googleDescription: placeDetails ? placeDetails.description : '',
-        latitude: placeDetails ? placeDetails.latitude : null,
-        longitude: placeDetails ? placeDetails.longitude : null,
-        address: placeDetails ? placeDetails.address : null,
-        phone: placeDetails ? placeDetails.phone : null,
-        website: placeDetails ? placeDetails.website : null
-      };
-    }));
+  // Don't forget to add the last category
+  if (currentCategory && currentRecommendations.length > 0) {
+    const recommendations = (await Promise.all(currentRecommendations)).filter((r): r is Recommendation => r !== null);
+    result.push({ category: currentCategory, recommendations });
+  }
 
-    return {
-      category: simplifiedCategory,
-      recommendations: recommendations.filter((rec): rec is Recommendation => rec !== null)
-    };
-  }));
-
-  return parsedCategories.filter((cat): cat is CategoryRecommendations => cat !== null);
+  return result;
 }
 
 export interface PlaceDetails {

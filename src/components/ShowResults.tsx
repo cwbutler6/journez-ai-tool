@@ -6,7 +6,6 @@ import { askAIForLocations } from '@/lib/api';
 
 export default async function ShowResults({ categories, location, numberOfLocations }: { categories: string[], location: string, numberOfLocations: number }) {
   const locations = await askAIForLocations({ categories, location, numberOfLocations })
-  console.log('locations:', locations);
   return (
     <div className="flex flex-col grow rounded-[40px] shadow-[0_0_20px_1px_rgba(0,0,0,0.05)]">
       <div className='flex flex-col grow p-[40px] gap-y-[20px]'>
@@ -21,6 +20,7 @@ export default async function ShowResults({ categories, location, numberOfLocati
 }
 
 function getCategoryName(category: string) {
+  console.log('category:', category);
   switch (category) {
     case 'do':
       return 'Things To Do';

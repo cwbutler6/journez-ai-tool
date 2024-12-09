@@ -16,6 +16,7 @@ interface CategoryListProps {
 
 const CategoryList: FC<CategoryListProps> = memo(function CategoryListComponent({ label, places=[] }: CategoryListProps) {
   const [open, setOpen] = useState(false);
+  console.log(label, places)
   return (
     <Collapsible className='rounded-[20px] border-[2px] border-[#F6F6F6]' onOpenChange={setOpen}>
       <CollapsibleTrigger className={cn('p-[30px] w-full flex flex-row items-center justify-between')}>
