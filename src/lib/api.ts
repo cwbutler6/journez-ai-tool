@@ -82,11 +82,11 @@ async function parseRecommendations(response: string, location: string): Promise
       const sectionLower = trimmedSection.toLowerCase();
       if (sectionLower.includes('activities')) {
         currentCategory = 'do';
-      } else if (sectionLower.includes('places to eat')) {
+      } else if (sectionLower.includes('places to eat') || sectionLower.includes('dining')) {
         currentCategory = 'eat';
-      } else if (sectionLower.includes('places to shop')) {
+      } else if (sectionLower.includes('places to shop') || sectionLower.includes('shopping')) {
         currentCategory = 'shop';
-      } else if (sectionLower.includes('places to stay')) {
+      } else if (sectionLower.includes('places to stay') || sectionLower.includes('hotels')) {
         currentCategory = 'stay';
       } else {
         currentCategory = null;
