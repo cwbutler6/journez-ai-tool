@@ -13,7 +13,7 @@ export async function askAIForLocations({ categories, location, numberOfLocation
   try {
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
-      systemInstruction: "You are a local travel agent. You list specific locations. Do not include general areas or the location itselfin the list of locations. Do not include locations that do not have physical addresses, websites, or hours of operations listed"
+      systemInstruction: `You are a local travel agent. For each category, respond with an exact header format: '**Places to Do:**' for activities, '**Places to Eat:**' for restaurants, '**Places to Shop:**' for shopping, and '**Places to Stay:**' for accommodations. List specific locations under each category. Each location must have a physical address, website, and operating hours. Do not include general areas or the location itself in recommendations. Important: For each request, vary your recommendations by considering different neighborhoods, price ranges, and styles while maintaining quality. Current time: ${new Date().toISOString()}`
     });
     
     const categoryQuestions: { [key: string]: string } = {
@@ -78,15 +78,14 @@ async function parseRecommendations(response: string, location: string): Promise
         result.push({ category: currentCategory, recommendations });
       }
 
-      // Determine new category
-      const sectionLower = trimmedSection.toLowerCase();
-      if (sectionLower.includes('activities')) {
+      // Determine new category based on exact header matches
+      if (trimmedSection.startsWith('**Places to Do:**')) {
         currentCategory = 'do';
-      } else if (sectionLower.includes('places to eat') || sectionLower.includes('dining')) {
+      } else if (trimmedSection.startsWith('**Places to Eat:**')) {
         currentCategory = 'eat';
-      } else if (sectionLower.includes('places to shop') || sectionLower.includes('shopping')) {
+      } else if (trimmedSection.startsWith('**Places to Shop:**')) {
         currentCategory = 'shop';
-      } else if (sectionLower.includes('places to stay') || sectionLower.includes('hotels')) {
+      } else if (trimmedSection.startsWith('**Places to Stay:**')) {
         currentCategory = 'stay';
       } else {
         currentCategory = null;
